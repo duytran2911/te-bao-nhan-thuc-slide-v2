@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đặc điểm chung của tế bào nhân thực</title>
+<style>
+  :root {
+    --bg: #F1ECDF;
+    --ink: #1A1A1A;
+    --navy: #1F3DA8;
+    --muted: #6B6B6B;
+    --sage: #8FA67E;
+    --card: #FFFFFF;
+    --divider: #D9D2C2;
+    --gold: #F39C12;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+  .slide {
+    min-height: 100vh;
+    padding: 40px 50px;
+    display: none;
+    position: relative;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .slide.active {
+    display: flex;
+    animation: fadeIn 0.6s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  h1 { font-size: 48px; color: var(--navy); margin-bottom: 10px; }
+  h2 { font-size: 30px; margin-bottom: 16px; color: var(--ink); }
+  h3 { font-size: 20px; color: var(--navy); margin: 12px 0 6px; }
+  .subtitle { font-size: 18px; color: var(--muted); margin-bottom: 20px; }
+  .nav {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 12px; z-index: 100;
+  }
+  .nav button {
+    background: var(--navy); color: white; border: none;
+    padding: 10px 20px; border-radius: 30px; cursor: pointer; font-size: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    transition: background 0.2s;
+  }
+  .nav button:hover { background: #162a7a; }
+  .nav button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .page-indicator {
+    position: fixed; top: 18px; right: 30px; color: var(--muted); font-size: 14px; font-weight: bold; z-index: 100;
+  }
+  .card {
+    background: var(--card); border-radius: 12px; padding: 18px; margin: 10px 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06); border: 1px solid var(--divider);
+    text-align: left;
+  }
+  .slide-content-width {
+    width: 100%;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; align-items: stretch; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; text-align: left; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; background: white; border-radius: 10px; overflow: hidden; text-align: left; font-size: 15px; }
+  th, td { padding: 11px 14px; border-bottom: 1px solid var(--divider); vertical-align: top; }
+  th { background: var(--navy); color: white; font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  /* Quiz Styling */
+  .quiz-container { width: 100%; max-width: 820px; margin: 0 auto; text-align: left; }
+  .quiz-option {
+    background: white; border: 2px solid var(--divider); border-radius: 10px;
+    padding: 12px 16px; margin: 8px 0; cursor: pointer; transition: all 0.25s ease;
+  }
+  .quiz-option:hover { border-color: var(--navy); transform: translateX(6px); }
+  .quiz-option.correct { border-color: #27AE60; background: #e8f8ef; font-weight: 600; }
+  .quiz-option.wrong { border-color: #C0392B; background: #fdeaea; }
+  .answer { margin-top: 12px; padding: 10px 14px; background: #e8f8ef; border-radius: 8px; font-weight: 600; color: #1e7e34; display: none; border-left: 4px solid #27AE60; }
+
+  /* Wheel Styling */
+  .wheel-container {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;
+  }
+  .wheel-wrapper {
+    position: relative; width: 320px; height: 320px; margin-bottom: 15px;
+  }
+  #wheelCanvas {
+    width: 320px; height: 320px; border-radius: 50%; box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  }
+  .wheel-arrow {
+    position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 24px solid #C0392B;
+    z-index: 10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  }
+  .spin-btn {
+    background: var(--navy); color: white; border: none; padding: 12px 30px; font-size: 18px; font-weight: bold; border-radius: 25px; cursor: pointer; box-shadow: 0 4px 12px rgba(31,61,168,0.3); transition: transform 0.1s, background 0.2s;
+  }
+  .spin-btn:hover { background: #162a7a; transform: scale(1.05); }
+  .spin-btn:active { transform: scale(0.98); }
+  .winner-display {
+    margin-top: 15px; font-size: 22px; font-weight: bold; color: #155724; background: #d4edda; padding: 10px 20px; border-radius: 10px; border: 1px solid #c3e6cb; display: none; text-align: center; animation: popIn 0.5s ease;
+  }
+
+  /* Floating wheel button + modal overlay */
+  .wheel-launcher {
+    position: fixed; right: 24px; bottom: 24px; z-index: 120;
+    border: 0; border-radius: 999px; padding: 13px 20px;
+    color: #fff; background: var(--navy); font-weight: 700;
+    font-size: 15px; cursor: pointer; box-shadow: 0 6px 20px rgba(0,0,0,.2);
+  }
+  .wheel-launcher:hover { background: #162a7a; transform: translateY(-2px); }
+  .wheel-modal {
+    position: fixed; inset: 0; z-index: 1000; display: none;
+    align-items: center; justify-content: center; padding: 18px;
+    background: rgba(12, 18, 35, .72); backdrop-filter: blur(5px);
+  }
+  .wheel-modal.open { display: flex; }
+  .wheel-dialog {
+    width: min(980px, 96vw); max-height: 94vh; overflow: auto;
+    position: relative; display: grid;
+    grid-template-columns: minmax(320px, 1.1fr) minmax(260px, .9fr);
+    gap: 24px; align-items: center; padding: 28px;
+    background: #F8F6EF; border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  }
+  .wheel-dialog h2 { font-size: 25px; }
+  .wheel-close {
+    position: absolute; top: 12px; right: 14px; width: 38px; height: 38px;
+    border: 0; border-radius: 50%; background: #e7e2d6; color: #222;
+    font-size: 23px; cursor: pointer;
+  }
+  .wheel-wrapper {
+    position: relative; width: min(min(38vw, 440px), 100%);
+    height: auto; aspect-ratio: 1; margin: 0 auto 14px;
+  }
+  #wheelCanvas {
+    display: block; width: 100%; height: 100%; border-radius: 50%;
+    box-shadow: 0 8px 24px rgba(0,0,0,.15);
+  }
+  .wheel-side textarea {
+    width: 100%; min-height: 220px; padding: 12px;
+    border: 1px solid var(--divider); border-radius: 10px;
+    resize: vertical; font: inherit;
+  }
+  .wheel-side .card { margin: 0; }
+  .wheel-side button { cursor: pointer; }
+  .winner-display { font-size: 18px; }
+  body.wheel-open { overflow: hidden; }
+  @media (max-width: 720px) {
+    .wheel-dialog { grid-template-columns: 1fr; gap: 12px; padding: 22px 16px; }
+    .wheel-wrapper { width: min(78vw, 360px); }
+    .wheel-side textarea { min-height: 130px; }
+    .wheel-launcher { right: 14px; bottom: 14px; }
+  }
+
+  @keyframes popIn {
+    0% { transform: scale(0.6); opacity: 0; }
+    70% { transform: scale(1.08); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .feature-list {
+    list-style: none;
+    padding: 0;
+  }
+  .feature-list li {
+    background: white;
+    border: 1px solid var(--divider);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin: 8px 0;
+    text-align: left;
+    position: relative;
+    padding-left: 42px;
+  }
+  .feature-list li::before {
+    content: "✓";
+    position: absolute;
+    left: 14px;
+    top: 12px;
+    color: var(--navy);
+    font-weight: 800;
+  }
+  .highlight-box {
+    background: linear-gradient(135deg, #eef2ff, #f8f6ef);
+    border: 1px solid #c5d0f0;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 14px 0;
+    text-align: left;
+  }
+  .two-col-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    text-align: left;
+  }
+  .compare-card {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--divider);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  }
+  .compare-card h3 {
+    margin-top: 0;
+    margin-bottom: 10px;
+  }
+  .compare-card.plant { border-top: 4px solid #27AE60; }
+  .compare-card.animal { border-top: 4px solid #E67E22; }
+  ul.clean {
+    padding-left: 18px;
+    margin: 6px 0;
+  }
+  ul.clean li { margin: 4px 0; }
+  @media (max-width: 800px) {
+    .grid-2, .two-col-compare { grid-template-columns: 1fr; }
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+    table { font-size: 13px; }
+    th, td { padding: 8px 10px; }
+    h1 { font-size: 36px; }
+    .slide { padding: 28px 20px; }
+  }
+
+  /* ===== Animated cell slide ===== */
+  #sCell { padding-bottom: 96px; }
+  .cell-layout {
+    display: grid; grid-template-columns: 1.6fr 1fr; gap: 18px;
+    align-items: start; text-align: left; margin-top: 8px;
+  }
+  .cell-stage {
+    background: radial-gradient(circle at 50% 45%, #ffffff 0%, #f6f1e3 100%);
+    border: 1px solid var(--divider); border-radius: 16px; padding: 8px;
+    box-shadow: 0 6px 18px rgba(0,0,0,.07);
+  }
+  #cellSvg { display: block; width: 100%; height: auto; }
+  #cellSvg .org { cursor: pointer; transition: opacity .35s ease, filter .25s ease; }
+  #cellSvg .org:hover { filter: drop-shadow(0 0 5px rgba(243,156,18,.95)); }
+  #cellSvg .org.sel { filter: drop-shadow(0 0 7px rgba(243,156,18,1)); }
+  #cellSvg.has-sel .org:not(.sel) { opacity: .28; }
+  .cell-lbl {
+    font: 700 12.5px 'Segoe UI', Arial, sans-serif; fill: #1A1A1A;
+    paint-order: stroke; stroke: #fff; stroke-width: 3.5px; stroke-linejoin: round;
+    pointer-events: none;
+  }
+  .cell-info {
+    background: #fff; border: 1px solid var(--divider); border-top: 6px solid var(--navy);
+    border-radius: 14px; padding: 16px 18px; min-height: 300px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.06);
+  }
+  .cell-info h3 { margin: 0 0 6px; font-size: 22px; }
+  .cell-info p { margin: 0 0 8px; }
+  .cell-info .hint { color: var(--muted); font-size: 14px; }
+  .cell-info.pop { animation: popIn .45s ease; }
+  .cell-chips { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; margin-top: 12px; }
+  .cell-chip {
+    border: 1.5px solid var(--divider); background: #fff; border-radius: 999px;
+    padding: 5px 12px; font-size: 13px; cursor: pointer; display: inline-flex;
+    align-items: center; gap: 6px; font-family: inherit; transition: all .2s;
+  }
+  .cell-chip i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .cell-chip:hover { border-color: var(--navy); }
+  .cell-chip.active { background: var(--navy); color: #fff; border-color: var(--navy); }
+  .cell-controls { display: flex; gap: 10px; justify-content: center; margin-top: 10px; flex-wrap: wrap; }
+  .cell-btn {
+    background: var(--navy); color: #fff; border: 0; border-radius: 999px;
+    padding: 8px 18px; cursor: pointer; font-size: 14px; font-family: inherit;
+  }
+  .cell-btn.alt { background: var(--sage); }
+  @media (max-width: 800px) { .cell-layout { grid-template-columns: 1fr; } }
+
+  /* Images */
+  .topic-image {
+    display: block;
+    width: 100%;
+    max-width: 720px;
+    height: auto;
+    margin: 12px auto;
+    border-radius: 12px;
+    border: 1px solid var(--divider);
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.08);
+    cursor: zoom-in;
+  }
+  .topic-image.small { max-width: 480px; }
+  .image-caption {
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: -4px;
+    margin-bottom: 10px;
+  }
+  .image-lightbox {
+    position: fixed; inset: 0; z-index: 2000; display: none;
+    align-items: center; justify-content: center; padding: 28px;
+    background: rgba(10, 16, 32, .88); backdrop-filter: blur(4px);
+  }
+  .image-lightbox.open { display: flex; }
+  .image-lightbox img {
+    display: block; max-width: min(96vw, 1400px); max-height: 90vh;
+    width: auto; height: auto; object-fit: contain; border-radius: 12px;
+    box-shadow: 0 18px 60px rgba(0,0,0,.4); background: white;
+    cursor: zoom-out;
+  }
+  .image-lightbox-close {
+    position: absolute; top: 18px; right: 22px; width: 44px; height: 44px;
+    border: 0; border-radius: 50%; background: white; color: #1a1a1a;
+    font-size: 30px; line-height: 1; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-indicator" id="pageInd">1 / 13</div>
+
+<!-- SLIDE 1: Title -->
+<div class="slide active" id="s1">
+  <div class="slide-content-width">
+    <p style="letter-spacing: 4px; color: var(--muted); font-size: 14px;">SINH HỌC / TẾ BÀO</p>
+    <h1 style="font-size: 48px; margin-top: 16px;">Đặc điểm chung<br><span style="font-style: italic;">của tế bào nhân thực</span></h1>
+    <p class="subtitle" style="margin-top: 16px;">So sánh với tế bào nhân sơ · Phân biệt tế bào thực vật &amp; động vật</p>
+    <p style="color: var(--navy); margin-top: 30px; font-size: 17px;">Trần Quang Duy - 10A1</p>
+    <p class="subtitle" style="margin-top: 16px; font-size: smaller;">Có câu hỏi tương tác ở cuối — gọi ngẫu nhiên bằng vòng quay</p>
+  </div>
+</div>
+
+<!-- SLIDE 2: Mục tiêu / Tổng quan -->
+<div class="slide" id="s2">
+  <div class="slide-content-width">
+    <h2>Nội dung chính</h2>
+    <div class="grid-2" style="margin-top: 20px;">
+      <div class="card">
+        <h3>1. Đặc điểm chung</h3>
+        <p>Kích thước, cấu tạo phức tạp và các hệ thống đặc trưng của tế bào nhân thực so với tế bào nhân sơ.</p>
+      </div>
+      <div class="card">
+        <h3>2. Phân biệt thực vật – động vật</h3>
+        <p>Những cấu trúc thích nghi riêng của tế bào thực vật và tế bào động vật (cùng là tế bào nhân thực).</p>
+      </div>
+    </div>
+    <div class="highlight-box" style="margin-top: 24px;">
+      <strong>Điểm cốt lõi:</strong> Tế bào nhân thực có <em>nhân hoàn chỉnh</em>, hệ thống nội màng, khung xương tế bào và hệ thống bào quan đa dạng — khác biệt cơ bản so với tế bào nhân sơ.
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 3: Đặc điểm chung - kích thước & cấu tạo -->
+<div class="slide" id="s3">
+  <div class="slide-content-width">
+    <h2>1. Đặc điểm chung của tế bào nhân thực</h2>
+    <p class="subtitle">So với tế bào nhân sơ</p>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Kích thước</h3>
+        <ul class="clean">
+          <li>Thường <strong>lớn hơn</strong> tế bào nhân sơ</li>
+          <li>Kích thước khoảng <strong>10 – 100 µm</strong></li>
+          <li>Một số tế bào rất lớn: tế bào thần kinh, tế bào trứng, tế bào mạch gỗ…</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Cấu tạo phức tạp hơn</h3>
+        <ul class="clean">
+          <li>Có <strong>nhân chính thức</strong> với màng nhân</li>
+          <li>Có <strong>khung xương tế bào</strong></li>
+          <li>Có <strong>hệ thống nội màng</strong></li>
+          <li>Có hệ thống bào quan đa dạng (có màng / không màng)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE: Sơ đồ động tế bào nhân thực -->
+<div class="slide" id="sCell">
+  <div class="slide-content-width" style="max-width: 1120px;">
+    <h2 style="margin-bottom: 4px;">Tế bào nhân thực – hình minh họa động</h2>
+    <p class="subtitle" style="margin-bottom: 6px; font-size: 15px;">Nhấn vào bào quan trên hình (hoặc chọn nút bên dưới) để xem cấu tạo và chức năng</p>
+
+    <div class="cell-layout">
+      <div>
+        <div class="cell-stage">
+          <svg id="cellSvg" viewBox="0 0 640 440" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sơ đồ động tế bào nhân thực">
+
+            <!-- Tế bào chất -->
+            <ellipse cx="320" cy="220" rx="300" ry="200" fill="#FFF6DA">
+              <animate attributeName="rx" values="300;302.5;300" dur="5s" repeatCount="indefinite"/>
+              <animate attributeName="ry" values="200;197.5;200" dur="5s" repeatCount="indefinite"/>
+            </ellipse>
+
+            <!-- Màng sinh chất -->
+            <g class="org" data-key="membrane">
+              <ellipse cx="320" cy="220" rx="300" ry="200" fill="none" stroke="#E0A93B" stroke-width="8">
+                <animate attributeName="rx" values="300;302.5;300" dur="5s" repeatCount="indefinite"/>
+                <animate attributeName="ry" values="200;197.5;200" dur="5s" repeatCount="indefinite"/>
+              </ellipse>
+              <ellipse cx="320" cy="220" rx="293" ry="193" fill="none" stroke="#F8DE93" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round">
+                <animate attributeName="stroke-dashoffset" from="0" to="-110" dur="9s" repeatCount="indefinite"/>
+              </ellipse>
+              <text class="cell-lbl" x="320" y="46" text-anchor="middle">Màng sinh chất</text>
+            </g>
+
+            <!-- Khung xương tế bào -->
+            <g class="org" data-key="cyto" fill="none" stroke-linecap="round">
+              <g stroke="transparent" stroke-width="14">
+                <path d="M335 345 Q 280 350 230 340"/>
+                <path d="M335 345 Q 400 360 450 375"/>
+                <path d="M335 345 Q 360 385 395 400"/>
+                <path d="M335 345 Q 300 390 255 395"/>
+                <path d="M335 345 Q 255 300 190 265"/>
+              </g>
+              <g stroke="#90A4AE" stroke-width="2.6" stroke-dasharray="7 5">
+                <path d="M335 345 Q 280 350 230 340"><animate attributeName="stroke-dashoffset" from="0" to="-48" dur="3s" repeatCount="indefinite"/></path>
+                <path d="M335 345 Q 400 360 450 375"><animate attributeName="stroke-dashoffset" from="0" to="-48" dur="3.4s" repeatCount="indefinite"/></path>
+                <path d="M335 345 Q 360 385 395 400"><animate attributeName="stroke-dashoffset" from="0" to="-48" dur="2.8s" repeatCount="indefinite"/></path>
+                <path d="M335 345 Q 300 390 255 395"><animate attributeName="stroke-dashoffset" from="0" to="-48" dur="3.2s" repeatCount="indefinite"/></path>
+                <path d="M335 345 Q 255 300 190 265"><animate attributeName="stroke-dashoffset" from="0" to="-48" dur="3.6s" repeatCount="indefinite"/></path>
+              </g>
+              <!-- túi vận chuyển chạy trên vi ống -->
+              <circle r="5" fill="#4DB6AC" stroke="#00796B" stroke-width="1.5">
+                <animateMotion dur="4.5s" repeatCount="indefinite" path="M335 345 Q 400 360 450 375"/>
+                <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.1;.85;1" dur="4.5s" repeatCount="indefinite"/>
+              </circle>
+              <circle r="5" fill="#4DB6AC" stroke="#00796B" stroke-width="1.5">
+                <animateMotion dur="5s" begin="1.2s" repeatCount="indefinite" path="M190 265 Q 255 300 335 345"/>
+                <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.1;.85;1" dur="5s" begin="1.2s" repeatCount="indefinite"/>
+              </circle>
+              <text class="cell-lbl" x="226" y="374" text-anchor="end" stroke="#fff" fill="#1A1A1A">Khung xương tế bào</text>
+            </g>
+
+            <!-- Lưới nội chất hạt -->
+            <g class="org" data-key="rer" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M 214 160 C 176 168 170 205 196 212 C 220 218 186 240 204 262" stroke="#7B4F9D" stroke-width="13"/>
+              <path d="M 214 160 C 176 168 170 205 196 212 C 220 218 186 240 204 262" stroke="#E1BEE7" stroke-width="9"/>
+              <path d="M 214 160 C 176 168 170 205 196 212 C 220 218 186 240 204 262" stroke="#fff" stroke-width="2" stroke-dasharray="3 11"><animate attributeName="stroke-dashoffset" from="0" to="-28" dur="2s" repeatCount="indefinite"/></path>
+              <path d="M 214 160 C 176 168 170 205 196 212 C 220 218 186 240 204 262" stroke="#4A235A" stroke-width="5.5" stroke-dasharray="0.1 10"><animate attributeName="stroke-opacity" values="1;.5;1" dur="2.4s" repeatCount="indefinite"/></path>
+
+              <path d="M 372 160 C 412 150 418 190 388 200 C 358 210 398 240 386 256" stroke="#7B4F9D" stroke-width="13"/>
+              <path d="M 372 160 C 412 150 418 190 388 200 C 358 210 398 240 386 256" stroke="#E1BEE7" stroke-width="9"/>
+              <path d="M 372 160 C 412 150 418 190 388 200 C 358 210 398 240 386 256" stroke="#fff" stroke-width="2" stroke-dasharray="3 11"><animate attributeName="stroke-dashoffset" from="0" to="-28" dur="2.2s" repeatCount="indefinite"/></path>
+              <path d="M 372 160 C 412 150 418 190 388 200 C 358 210 398 240 386 256" stroke="#4A235A" stroke-width="5.5" stroke-dasharray="0.1 10"><animate attributeName="stroke-opacity" values="1;.5;1" dur="2.4s" begin=".6s" repeatCount="indefinite"/></path>
+
+              <path d="M 352 262 C 392 252 400 290 366 292 C 340 294 332 310 342 316" stroke="#7B4F9D" stroke-width="13"/>
+              <path d="M 352 262 C 392 252 400 290 366 292 C 340 294 332 310 342 316" stroke="#E1BEE7" stroke-width="9"/>
+              <path d="M 352 262 C 392 252 400 290 366 292 C 340 294 332 310 342 316" stroke="#fff" stroke-width="2" stroke-dasharray="3 11"><animate attributeName="stroke-dashoffset" from="0" to="-28" dur="2.4s" repeatCount="indefinite"/></path>
+              <path d="M 352 262 C 392 252 400 290 366 292 C 340 294 332 310 342 316" stroke="#4A235A" stroke-width="5.5" stroke-dasharray="0.1 10"><animate attributeName="stroke-opacity" values="1;.5;1" dur="2.4s" begin="1.2s" repeatCount="indefinite"/></path>
+              <text class="cell-lbl" x="172" y="242" text-anchor="end" stroke="#fff" fill="#1A1A1A">Lưới nội chất hạt</text>
+            </g>
+
+            <!-- Lưới nội chất trơn -->
+            <g class="org" data-key="ser" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M 386 256 C 410 262 430 245 444 232 C 452 224 446 212 432 208" stroke="#7B4F9D" stroke-width="13"/>
+              <path d="M 386 256 C 410 262 430 245 444 232 C 452 224 446 212 432 208" stroke="#F3E5F5" stroke-width="9"/>
+              <path d="M 386 256 C 410 262 430 245 444 232 C 452 224 446 212 432 208" stroke="#B07CC6" stroke-width="2.4" stroke-dasharray="3 11"><animate attributeName="stroke-dashoffset" from="0" to="-28" dur="1.8s" repeatCount="indefinite"/></path>
+              <text class="cell-lbl" x="456" y="214" stroke="#fff" fill="#1A1A1A">Lưới nội chất trơn</text>
+            </g>
+
+            <!-- Nhân -->
+            <g class="org" data-key="nucleus" transform="translate(290 205)">
+              <circle r="72" fill="#DCE5FF" stroke="#1F3DA8" stroke-width="3.5"/>
+              <circle r="63" fill="none" stroke="#1F3DA8" stroke-width="1.5" opacity=".7"/>
+              <!-- lỗ nhân -->
+              <circle r="67.5" fill="none" stroke="#FFF6DA" stroke-width="9" stroke-dasharray="7 31">
+                <animate attributeName="stroke-dashoffset" from="0" to="-38" dur="6s" repeatCount="indefinite"/>
+              </circle>
+              <!-- chất nhiễm sắc -->
+              <g fill="none" stroke="#4F6BD6" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="5 3">
+                <path d="M-44 -4 q10 -22 20 0 t20 0 t20 0 t20 0"><animate attributeName="stroke-dashoffset" from="0" to="-32" dur="4s" repeatCount="indefinite"/></path>
+                <path d="M-40 14 q10 -20 20 0 t20 0 t20 0 t20 0"><animate attributeName="stroke-dashoffset" from="0" to="32" dur="5s" repeatCount="indefinite"/></path>
+                <path d="M-30 -30 q10 -14 20 0 t20 0 t20 0"><animate attributeName="stroke-dashoffset" from="0" to="-32" dur="4.5s" repeatCount="indefinite"/></path>
+              </g>
+              <!-- nhân con -->
+              <circle cx="-14" cy="-6" r="14" fill="#1F3DA8" opacity=".88">
+                <animate attributeName="r" values="14;16;14" dur="2.6s" repeatCount="indefinite"/>
+              </circle>
+              <text class="cell-lbl" x="0" y="50" text-anchor="middle">Nhân</text>
+            </g>
+
+            <!-- Bộ máy Golgi -->
+            <g class="org" data-key="golgi" fill="none" stroke-linecap="round">
+              <g stroke="#8E6B00" stroke-width="12">
+                <path d="M445 270 Q478 255 511 270"/>
+                <path d="M441 283 Q478 266 515 283"/>
+                <path d="M443 296 Q478 279 513 296"/>
+                <path d="M450 309 Q478 296 506 309"/>
+              </g>
+              <g stroke="#F5CD5A" stroke-width="8">
+                <path d="M445 270 Q478 255 511 270"><animate attributeName="stroke-width" values="8;10;8" dur="2.4s" repeatCount="indefinite"/></path>
+                <path d="M441 283 Q478 266 515 283"><animate attributeName="stroke-width" values="8;10;8" dur="2.4s" begin=".3s" repeatCount="indefinite"/></path>
+                <path d="M443 296 Q478 279 513 296"><animate attributeName="stroke-width" values="8;10;8" dur="2.4s" begin=".6s" repeatCount="indefinite"/></path>
+                <path d="M450 309 Q478 296 506 309"><animate attributeName="stroke-width" values="8;10;8" dur="2.4s" begin=".9s" repeatCount="indefinite"/></path>
+              </g>
+              <!-- túi từ lưới nội chất đến Golgi -->
+              <circle r="4.5" fill="#E1BEE7" stroke="#7B4F9D" stroke-width="1.5">
+                <animateMotion dur="3s" repeatCount="indefinite" path="M445 232 C 440 250 440 262 447 272"/>
+                <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.15;.8;1" dur="3s" repeatCount="indefinite"/>
+              </circle>
+              <!-- túi tiết rời Golgi, xuất bào -->
+              <circle r="6" fill="#F5CD5A" stroke="#8E6B00" stroke-width="2">
+                <animateMotion dur="4.2s" begin=".8s" repeatCount="indefinite" path="M515 292 C 550 295 585 265 603 232"/>
+                <animate attributeName="opacity" values="0;1;1;0" keyTimes="0;.12;.85;1" dur="4.2s" begin=".8s" repeatCount="indefinite"/>
+                <animate attributeName="r" values="3;6;6;8" keyTimes="0;.2;.85;1" dur="4.2s" begin=".8s" repeatCount="indefinite"/>
+              </circle>
+              <text class="cell-lbl" x="478" y="338" text-anchor="middle" stroke="#fff" fill="#1A1A1A">Bộ máy Golgi</text>
+            </g>
+
+            <!-- Ty thể -->
+            <g class="org" data-key="mito">
+              <g transform="translate(120 165) rotate(-22)">
+                <g>
+                  <animateTransform attributeName="transform" type="scale" values="1;1.07;1" dur="1.6s" repeatCount="indefinite"/>
+                  <ellipse rx="46" ry="22" fill="#FAD2BE" stroke="#C0603A" stroke-width="3"/>
+                  <ellipse rx="40" ry="16" fill="#F7B79A" stroke="#C0603A" stroke-width="1.5" opacity=".8"/>
+                  <path d="M-30 -14 v16 M-20 14 v-16 M-10 -14 v16 M0 14 v-16 M10 -14 v16 M20 14 v-16 M30 -12 v14" stroke="#C0603A" stroke-width="2" stroke-linecap="round" fill="none"/>
+                </g>
+                <circle r="3.6" fill="#F39C12" stroke="#fff" stroke-width="1">
+                  <animateMotion dur="2.2s" repeatCount="indefinite" path="M0 0 L 14 -42"/>
+                  <animate attributeName="opacity" values="0;1;0" dur="2.2s" repeatCount="indefinite"/>
+                </circle>
+                <circle r="3.6" fill="#F39C12" stroke="#fff" stroke-width="1">
+                  <animateMotion dur="2.2s" begin="1.1s" repeatCount="indefinite" path="M-10 0 L -28 36"/>
+                  <animate attributeName="opacity" values="0;1;0" dur="2.2s" begin="1.1s" repeatCount="indefinite"/>
+                </circle>
+              </g>
+              <g transform="translate(505 160) rotate(28)">
+                <g>
+                  <animateTransform attributeName="transform" type="scale" values="1;1.07;1" dur="1.9s" begin=".5s" repeatCount="indefinite"/>
+                  <ellipse rx="46" ry="22" fill="#FAD2BE" stroke="#C0603A" stroke-width="3"/>
+                  <ellipse rx="40" ry="16" fill="#F7B79A" stroke="#C0603A" stroke-width="1.5" opacity=".8"/>
+                  <path d="M-30 -14 v16 M-20 14 v-16 M-10 -14 v16 M0 14 v-16 M10 -14 v16 M20 14 v-16 M30 -12 v14" stroke="#C0603A" stroke-width="2" stroke-linecap="round" fill="none"/>
+                </g>
+                <circle r="3.6" fill="#F39C12" stroke="#fff" stroke-width="1">
+                  <animateMotion dur="2.4s" begin=".4s" repeatCount="indefinite" path="M0 0 L 12 -40"/>
+                  <animate attributeName="opacity" values="0;1;0" dur="2.4s" begin=".4s" repeatCount="indefinite"/>
+                </circle>
+              </g>
+              <text class="cell-lbl" x="120" y="213" text-anchor="middle">Ty thể</text>
+              <text class="cell-lbl" x="560" y="113" text-anchor="middle" font-size="11">ATP ✦</text>
+            </g>
+
+            <!-- Lysosome -->
+            <g class="org" data-key="lyso" transform="translate(160 305)">
+              <g>
+                <animateTransform attributeName="transform" type="scale" values="1;1.1;1" dur="2.2s" repeatCount="indefinite"/>
+                <circle r="16" fill="#E8DAEF" stroke="#7D3C98" stroke-width="3"/>
+                <circle cx="-6" cy="-4" r="2.6" fill="#7D3C98"><animateTransform attributeName="transform" type="translate" values="0 0;3 2;-2 3;0 0" dur="3s" repeatCount="indefinite"/></circle>
+                <circle cx="5" cy="-6" r="2.6" fill="#7D3C98"><animateTransform attributeName="transform" type="translate" values="0 0;-3 3;2 -2;0 0" dur="2.6s" repeatCount="indefinite"/></circle>
+                <circle cx="2" cy="6" r="2.6" fill="#7D3C98"><animateTransform attributeName="transform" type="translate" values="0 0;2 -3;-3 -1;0 0" dur="3.4s" repeatCount="indefinite"/></circle>
+                <circle cx="-7" cy="6" r="2.6" fill="#7D3C98"><animateTransform attributeName="transform" type="translate" values="0 0;-2 -2;3 -3;0 0" dur="2.9s" repeatCount="indefinite"/></circle>
+              </g>
+              <text class="cell-lbl" x="0" y="36" text-anchor="middle">Lysosome</text>
+            </g>
+
+            <!-- Trung thể -->
+            <g class="org" data-key="centro" transform="translate(335 345)">
+              <g>
+                <animateTransform attributeName="transform" type="rotate" values="0;18;0" dur="6s" repeatCount="indefinite"/>
+                <rect x="-19" y="2" width="26" height="9" rx="4.5" fill="#CFD8DC" stroke="#455A64" stroke-width="2"/>
+                <rect x="7" y="-16" width="9" height="26" rx="4.5" fill="#CFD8DC" stroke="#455A64" stroke-width="2"/>
+              </g>
+              <text class="cell-lbl" x="0" y="32" text-anchor="middle">Trung thể</text>
+            </g>
+
+            <!-- Ribosome tự do -->
+            <g class="org" data-key="ribo" fill="#4A235A">
+              <g><circle cx="396" cy="112" r="3.2"/><circle cx="410" cy="122" r="3.2"/><circle cx="422" cy="110" r="3.2"/><animateTransform attributeName="transform" type="translate" values="0 0;4 -3;-3 4;0 0" dur="4s" repeatCount="indefinite"/></g>
+              <g><circle cx="200" cy="108" r="3.2"/><circle cx="188" cy="120" r="3.2"/><circle cx="212" cy="120" r="3.2"/><animateTransform attributeName="transform" type="translate" values="0 0;-4 3;3 -4;0 0" dur="4.6s" repeatCount="indefinite"/></g>
+              <g><circle cx="240" cy="300" r="3.2"/><circle cx="226" cy="312" r="3.2"/><circle cx="254" cy="314" r="3.2"/><animateTransform attributeName="transform" type="translate" values="0 0;3 3;-4 -2;0 0" dur="3.6s" repeatCount="indefinite"/></g>
+              <g><circle cx="565" cy="215" r="3.2"/><circle cx="553" cy="228" r="3.2"/><animateTransform attributeName="transform" type="translate" values="0 0;-3 -3;3 3;0 0" dur="4.2s" repeatCount="indefinite"/></g>
+              <text class="cell-lbl" x="409" y="98" text-anchor="middle">Ribosome</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="cell-chips" id="cellChips"></div>
+        <div class="cell-controls">
+          <button class="cell-btn" id="tourBtn" type="button" onclick="toggleTour()">▶ Tự động giới thiệu</button>
+          <button class="cell-btn alt" id="animBtn" type="button" onclick="toggleCellAnim()">⏸ Tạm dừng hiệu ứng</button>
+        </div>
+      </div>
+
+      <div class="cell-info" id="cellInfo"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 4: Chi tiết các đặc điểm -->
+<div class="slide" id="s4">
+  <div class="slide-content-width">
+    <h2>Các hệ thống đặc trưng</h2>
+    <img class="topic-image" onclick="openImageLightbox(this)" title="Nhấn để phóng to"
+      src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Animal_Cell.svg/1280px-Animal_Cell.svg.png"
+      alt="Sơ đồ tế bào động vật (tế bào nhân thực điển hình)">
+    <p class="image-caption">Sơ đồ tế bào động vật — ví dụ điển hình của tế bào nhân thực (Nguồn: Wikimedia Commons)</p>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Nhân hoàn chỉnh</h3>
+        <p>Màng nhân ngăn cách chất nhân (chứa DNA) với tế bào chất → vật chất di truyền được bảo vệ và điều hòa tốt hơn.</p>
+      </div>
+      <div class="card">
+        <h3>Hệ thống nội màng</h3>
+        <p>Chia tế bào chất thành nhiều khoang riêng biệt, giúp các quá trình trao đổi chất diễn ra đồng thời, hiệu quả.</p>
+      </div>
+      <div class="card">
+        <h3>Khung xương tế bào</h3>
+        <p>Hệ thống sợi protein giúp duy trì hình dạng, hỗ trợ vận động nội bào và di chuyển của tế bào.</p>
+      </div>
+      <div class="card">
+        <h3>Hệ thống bào quan</h3>
+        <p>Bao gồm bào quan có màng (ty thể, lưới nội chất, Golgi, lysosome…) và không có màng (ribosome, trung thể…).</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 5: Bảng so sánh nhân sơ vs nhân thực -->
+<div class="slide" id="s5">
+  <div class="slide-content-width" style="max-width: 920px;">
+    <h2>Phân biệt tế bào nhân sơ và tế bào nhân thực</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 48%;">Tế bào nhân sơ</th>
+          <th>Tế bào nhân thực</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Có kích thước nhỏ hơn.</td>
+          <td>Có kích thước lớn hơn (thường 10–100 µm).</td>
+        </tr>
+        <tr>
+          <td>Chưa có màng nhân bao bọc vật chất di truyền (vùng nhân).</td>
+          <td>Có màng nhân bao bọc vật chất di truyền (nhân hoàn chỉnh).</td>
+        </tr>
+        <tr>
+          <td>Chưa có hệ thống nội màng.</td>
+          <td>Có hệ thống nội màng chia tế bào chất thành các khoang riêng biệt.</td>
+        </tr>
+        <tr>
+          <td>Không có hệ thống các bào quan có màng bao bọc.</td>
+          <td>Có hệ thống các bào quan có màng và không có màng bao bọc.</td>
+        </tr>
+        <tr>
+          <td>Không có hệ thống khung xương tế bào.</td>
+          <td>Có hệ thống khung xương tế bào.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- SLIDE 6: Phân biệt thực vật - động vật (mở đầu) -->
+<div class="slide" id="s6">
+  <div class="slide-content-width">
+    <h2>2. Phân biệt tế bào thực vật và tế bào động vật</h2>
+    <div class="highlight-box">
+      Tế bào thực vật và tế bào động vật đều là <strong>tế bào nhân thực điển hình</strong>, nhưng chúng có những đặc điểm cấu trúc thích nghi riêng.
+    </div>
+    <img class="topic-image" onclick="openImageLightbox(this)" title="Nhấn để phóng to"
+      src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Simple_plant_and_animal_cell.svg/1280px-Simple_plant_and_animal_cell.svg.png"
+      alt="So sánh sơ đồ tế bào thực vật (trái) và tế bào động vật (phải)">
+    <p class="image-caption">Tế bào thực vật (trái) và tế bào động vật (phải) — so sánh cấu trúc đơn giản (Wikimedia Commons)</p>
+    <div class="two-col-compare" style="margin-top: 12px;">
+      <div class="compare-card plant">
+        <h3>🌱 Tế bào thực vật</h3>
+        <p>Thích nghi với sự sống cố định, quang hợp, dự trữ và chống chịu áp suất thẩm thấu.</p>
+      </div>
+      <div class="compare-card animal">
+        <h3>🐾 Tế bào động vật</h3>
+        <p>Thích nghi với sự di chuyển, tiêu hóa nội bào và trao đổi chất linh hoạt.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 7: Bảng so sánh thực vật vs động vật -->
+<div class="slide" id="s7">
+  <div class="slide-content-width" style="max-width: 920px;">
+    <h2>Bảng so sánh cấu trúc</h2>
+    <div class="grid-2" style="margin-bottom: 14px; align-items: start;">
+      <div>
+        <img class="topic-image" style="max-width:100%;" onclick="openImageLightbox(this)" title="Nhấn để phóng to"
+          src="https://upload.wikimedia.org/wikipedia/commons/0/08/Plant_cell_structure.png"
+          alt="Cấu trúc tế bào thực vật chi tiết">
+        <p class="image-caption">Tế bào thực vật (chi tiết)</p>
+      </div>
+      <div>
+        <img class="topic-image" style="max-width:100%;" onclick="openImageLightbox(this)" title="Nhấn để phóng to"
+          src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/Animal_Cell.svg/960px-Animal_Cell.svg.png"
+          alt="Cấu trúc tế bào động vật chi tiết">
+        <p class="image-caption">Tế bào động vật (chi tiết)</p>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 48%;">Tế bào thực vật</th>
+          <th>Tế bào động vật</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Có thành cellulose bao quanh màng sinh chất</td>
+          <td>Không có thành cellulose bao quanh màng sinh chất</td>
+        </tr>
+        <tr>
+          <td>Có lục lạp</td>
+          <td>Không có lục lạp</td>
+        </tr>
+        <tr>
+          <td>Thường không có trung thể</td>
+          <td>Có trung thể</td>
+        </tr>
+        <tr>
+          <td>Có không bào trung tâm lớn</td>
+          <td>Không có không bào hoặc có không bào nhưng kích thước nhỏ</td>
+        </tr>
+        <tr>
+          <td>Không có lysosome</td>
+          <td>Có lysosome</td>
+        </tr>
+        <tr>
+          <td>Chất dự trữ là tinh bột, dầu</td>
+          <td>Chất dự trữ là glycogen, mỡ</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- SLIDE 8: Quiz 1 -->
+<div class="slide" id="s8">
+  <div class="quiz-container">
+    <h2>Câu hỏi 1</h2>
+    <p class="subtitle">Đặc điểm nào sau đây là đúng với tế bào nhân thực so với tế bào nhân sơ?</p>
+    <div class="quiz-option" onclick="checkAnswer(this, false)">A. Kích thước thường nhỏ hơn tế bào nhân sơ</div>
+    <div class="quiz-option" onclick="checkAnswer(this, true)">B. Có màng nhân bao bọc vật chất di truyền</div>
+    <div class="quiz-option" onclick="checkAnswer(this, false)">C. Không có hệ thống nội màng</div>
+    <div class="quiz-option" onclick="checkAnswer(this, false)">D. Không có khung xương tế bào</div>
+    <div class="answer">Giải thích: Tế bào nhân thực có nhân hoàn chỉnh với màng nhân ngăn cách chất nhân và tế bào chất — đây là đặc điểm phân biệt cơ bản với tế bào nhân sơ (chỉ có vùng nhân).</div>
+  </div>
+</div>
+
+<!-- SLIDE 9: Quiz 2 -->
+<div class="slide" id="s9">
+  <div class="quiz-container">
+    <h2>Câu hỏi 2</h2>
+    <p class="subtitle">Kích thước điển hình của tế bào nhân thực là khoảng bao nhiêu?</p>
+    <div class="quiz-option" onclick="checkAnswer(this, false)">A. 0,1 – 1 µm</div>
+    <div class="quiz-option" onclick="checkAnswer(this, false)">B. 1 – 10 µm</div>
+    <div class="quiz-option" onclick="checkAnswer(this, true)">C. 10 – 100 µm</div>
+    <div class="quiz-option" onclick="checkAnswer(this, false)">D. 100 – 1000 µm</div>
+    <div class="answer">Giải thích: Tế bào nhân thực thường có kích thước khoảng 10 – 100 µm, lớn hơn nhiều so với tế bào nhân sơ. Một số tế bào đặc biệt (thần kinh, trứng, mạch gỗ…) có thể lớn hơn rất nhiều.</div>
+  </div>
+</div>
+
+<!-- SLIDE 10: Quiz 3 -->
+<div class="slide" id="s10">
+  <div class="quiz-container">
+    <h2>Câu hỏi 3</h2>
+    <p class="subtitle">Cấu trúc nào chỉ có ở tế bào thực vật mà không có ở tế bào động vật?</p>
+    <div class="quiz-option" onclick="checkAnswer(this, false)">A. Lysosome</div>
+    <div class="quiz-option" onclick="checkAnswer(this, false)">B. Trung thể</div>
+    <div class="quiz-option" onclick="checkAnswer(this, true)">C. Lục lạp và thành cellulose</div>
+    <div class="quiz-option" onclick="checkAnswer(this, false)">D. Không bào nhỏ</div>
+    <div class="answer">Giải thích: Tế bào thực vật có lục lạp (quang hợp) và thành cellulose. Tế bào động vật không có hai cấu trúc này; thay vào đó thường có trung thể và lysosome.</div>
+  </div>
+</div>
+
+<!-- SLIDE 11: Quiz 4 -->
+<div class="slide" id="s11">
+  <div class="quiz-container">
+    <h2>Câu hỏi 4</h2>
+    <p class="subtitle">Vì sao tế bào nhân thực được coi là có cấu tạo phức tạp hơn tế bào nhân sơ?</p>
+    <div class="quiz-option" onclick="checkAnswer(this, false)">A. Vì không có ribosome</div>
+    <div class="quiz-option" onclick="checkAnswer(this, true)">B. Vì có nhân hoàn chỉnh, hệ thống nội màng, khung xương tế bào và nhiều bào quan có màng</div>
+    <div class="quiz-option" onclick="checkAnswer(this, false)">C. Vì DNA nằm tự do trong tế bào chất</div>
+    <div class="quiz-option" onclick="checkAnswer(this, false)">D. Vì không có màng sinh chất</div>
+    <div class="answer">Giải thích: Sự hiện diện của màng nhân, hệ thống nội màng, khung xương tế bào và hệ thống bào quan đa dạng khiến cấu tạo tế bào nhân thực phức tạp và phân hóa chức năng cao hơn.</div>
+  </div>
+</div>
+
+<!-- SLIDE 12: Tóm tắt + Cảm ơn -->
+<div class="slide" id="s12">
+  <div class="slide-content-width" style="max-width: 780px;">
+    <h2>Tóm tắt bài học</h2>
+    <div class="card">
+      <ul style="padding-left: 20px; line-height: 1.85;">
+        <li><strong>Tế bào nhân thực</strong> lớn hơn (10–100 µm), có nhân hoàn chỉnh, hệ thống nội màng, khung xương tế bào và hệ thống bào quan đa dạng.</li>
+        <li><strong>Khác tế bào nhân sơ</strong> ở: màng nhân, nội màng, bào quan có màng, khung xương tế bào.</li>
+        <li><strong>Tế bào thực vật</strong>: thành cellulose, lục lạp, không bào trung tâm lớn, dự trữ tinh bột/dầu; thường không có trung thể, lysosome.</li>
+        <li><strong>Tế bào động vật</strong>: không có thành cellulose &amp; lục lạp; có trung thể, lysosome; dự trữ glycogen/mỡ.</li>
+      </ul>
+    </div>
+    <div style="text-align: center; margin-top: 28px;">
+      <h2 style="color: var(--navy);">Cảm ơn các bạn đã lắng nghe!</h2>
+      <p class="subtitle" style="margin-top: 8px;">Nhấn nút “Gọi tên” để quay vòng chọn học sinh</p>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <button id="prevBtn" onclick="changeSlide(-1)" disabled>← Trước</button>
+  <button id="nextBtn" onclick="changeSlide(1)">Tiếp →</button>
+</div>
+
+<button class="wheel-launcher" type="button" onclick="openWheel()">🎯 Gọi tên</button>
+
+<div class="image-lightbox" id="imageLightbox" onclick="closeImageLightbox()" aria-hidden="true">
+  <button class="image-lightbox-close" type="button" onclick="event.stopPropagation(); closeImageLightbox()" aria-label="Đóng ảnh">×</button>
+  <img id="lightboxImage" alt="Hình phóng to" onclick="event.stopPropagation()">
+</div>
+
+<div class="wheel-modal" id="wheelModal" onclick="handleWheelBackdrop(event)" aria-hidden="true">
+  <div class="wheel-dialog" role="dialog" aria-modal="true" aria-labelledby="wheelTitle">
+    <button class="wheel-close" type="button" onclick="closeWheel()" aria-label="Đóng vòng quay">×</button>
+    <div class="wheel-main">
+      <h2 id="wheelTitle" style="text-align:center;">🎯 Vòng quay gọi tên</h2>
+      <p class="subtitle" style="text-align:center; font-size:14px;">Nhấn quay để chọn ngẫu nhiên một học sinh.</p>
+      <div class="wheel-container">
+        <div class="wheel-wrapper">
+          <div class="wheel-arrow"></div>
+          <canvas id="wheelCanvas" width="440" height="440"></canvas>
+        </div>
+        <button class="spin-btn" id="spinButton" onclick="spinWheel()">🚀 QUAY NGAY</button>
+        <div id="winnerText" class="winner-display">🎉 Chúc mừng: <span id="winnerName">...</span></div>
+      </div>
+    </div>
+    <div class="wheel-side">
+      <div class="card">
+        <h3>Danh sách học sinh</h3>
+        <p style="font-size:13px; color:var(--muted); margin-bottom:8px;">Mỗi tên nằm trên một dòng. Có thể chỉnh sửa danh sách.</p>
+        <textarea id="studentList" oninput="updateWheelFromInput()">An
+Bùi Đức An
+Bùi Quang Anh
+Phạm Quỳnh Anh
+Trần Thị Phương Anh
+Mai Tiến Bảo
+Trần Minh Chi
+Hoàng Ngọc Diệp
+Vũ Thị Thùy Dung
+Trần Quang Duy
+Giáp Đại Dương
+Vũ Thị Thùy Dương
+Giáp Hoàng Tâm Đan
+Nguyễn Hữu Khoa Đăng
+Nguyễn Hương Giang
+Trần Thị Hương Giang
+Hoàng Thu Hạ
+Hoàng Ngọc Hân
+Lê Gia Hân
+Lý Gia Hân
+Nguyễn Lâm Hoàng
+Hà Gia Huy
+Hoàng Lê Minh Khôi
+Lục Thắng Khôi
+Phan Hoàng Khôi
+Nguyễn Đình Kiên
+Trần Khánh Linh
+Vũ Thị Khánh Linh
+Lại Đức Mạnh
+Đỗ Quang Minh
+Nguyễn Bình Minh
+Phạm Tuấn Nghĩa
+Trần Bùi Thiên Nghĩa
+Phí Bảo Ngọc
+Vũ Gia Ninh
+Vi Hồng Phong
+Nguyễn Phúc Thành
+Nguyễn Tiến Thành
+Lương Hoài Phương Thảo
+Nguyễn Thị Bích Thủy
+Ngô Thị Anh Thư
+Trần Nguyễn Huyền Trang
+Vũ Ngọc Thanh Tú
+Lầu Mạnh Tường
+Nguyễn Đăng Vinh
+Lý Tường Vy
+Nguyễn Hà Vy</textarea>
+        <button onclick="updateWheelFromInput()" style="margin-top:10px; background:var(--sage); color:white; border:0; padding:9px 16px; border-radius:16px;">Cập nhật danh sách</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openImageLightbox(image) {
+  const modal = document.getElementById('imageLightbox');
+  const enlarged = document.getElementById('lightboxImage');
+  enlarged.src = image.src;
+  enlarged.alt = image.alt || 'Hình ảnh phóng to';
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+}
+function closeImageLightbox() {
+  const modal = document.getElementById('imageLightbox');
+  if (!modal) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+let current = 1;
+const slideEls = Array.from(document.querySelectorAll('.slide'));
+const total = slideEls.length;
+
+function showSlide(n) {
+  slideEls.forEach(s => s.classList.remove('active'));
+  slideEls[n - 1].classList.add('active');
+  syncCellAnimation(slideEls[n - 1].id === 'sCell');
+  document.getElementById('pageInd').textContent = n + ' / ' + total;
+  document.getElementById('prevBtn').disabled = (n === 1);
+  document.getElementById('nextBtn').disabled = (n === total);
+  current = n;
+}
+
+function changeSlide(dir) {
+  let next = current + dir;
+  if (next >= 1 && next <= total) showSlide(next);
+}
+
+function checkAnswer(el, isCorrect) {
+  const parent = el.closest('.quiz-container') || el.parentElement;
+  const options = parent.querySelectorAll('.quiz-option');
+
+  options.forEach(option => {
+    option.style.pointerEvents = 'none';
+    option.classList.remove('correct', 'wrong');
+
+    const handler = option.getAttribute('onclick') || '';
+    const isOptionCorrect = /checkAnswer\s*\(\s*this\s*,\s*true\s*\)/.test(handler);
+
+    if (isOptionCorrect) {
+      option.classList.add('correct');
+      if (!option.querySelector('.correct-mark')) {
+        const mark = document.createElement('span');
+        mark.className = 'correct-mark';
+        mark.textContent = '  ✓ ĐÁP ÁN ĐÚNG';
+        mark.style.cssText = 'display:inline-block;margin-left:10px;color:#16803c;font-weight:800;';
+        option.appendChild(mark);
+      }
+    }
+
+    if (option === el && !isCorrect) {
+      option.classList.add('wrong');
+      if (!option.querySelector('.wrong-mark')) {
+        const mark = document.createElement('span');
+        mark.className = 'wrong-mark';
+        mark.textContent = '  ✗ Bạn chọn';
+        mark.style.cssText = 'display:inline-block;margin-left:10px;color:#c0392b;font-weight:800;';
+        option.appendChild(mark);
+      }
+    }
+  });
+
+  const explanation = parent.querySelector('.answer');
+  if (explanation) {
+    explanation.style.display = 'block';
+    explanation.style.visibility = 'visible';
+    explanation.style.opacity = '1';
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('imageLightbox')?.classList.contains('open')) {
+    closeImageLightbox();
+    return;
+  }
+  if (e.key === 'Escape' && document.getElementById('wheelModal').classList.contains('open')) {
+    closeWheel();
+    return;
+  }
+  if (document.getElementById('wheelModal').classList.contains('open')) return;
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+
+  if (e.key === 'ArrowRight' || e.key === ' ') changeSlide(1);
+  if (e.key === 'ArrowLeft') changeSlide(-1);
+});
+
+/* ================= WHEEL OF FORTUNE SCRIPT ================= */
+let students = [];
+const colors = ["#3498DB", "#E74C3C", "#2ECC71", "#F1C40F", "#9B59B6", "#1ABC9C", "#E67E22", "#34495E", "#00B894", "#6C5CE7"];
+let startAngle = 0;
+let isSpinning = false;
+
+function openWheel() {
+  const modal = document.getElementById('wheelModal');
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('wheel-open');
+  updateWheelFromInput();
+  drawWheel();
+}
+
+function closeWheel() {
+  const modal = document.getElementById('wheelModal');
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('wheel-open');
+}
+
+function handleWheelBackdrop(event) {
+  if (event.target.id === 'wheelModal') closeWheel();
+}
+
+function updateWheelFromInput() {
+  const field = document.getElementById('studentList');
+  const list = field.value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+
+  if (list.length > 0) {
+    students = list;
+    startAngle = 0;
+    document.getElementById('winnerText').style.display = 'none';
+    drawWheel();
+  }
+}
+
+function drawWheel() {
+  const canvas = document.getElementById('wheelCanvas');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const radius = Math.min(cx, cy) - 8;
+  const count = students.length;
+
+  if (count === 0) return;
+
+  const arcSize = (2 * Math.PI) / count;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (let i = 0; i < count; i++) {
+    const angle = startAngle + i * arcSize;
+    const middle = angle + arcSize / 2;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius, angle, angle + arcSize);
+    ctx.closePath();
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+
+    const fontSize = Math.max(10, Math.min(20, 21 - Math.log2(count) * 1.15));
+    const maxTextWidth = radius - 58;
+
+    ctx.save();
+    ctx.translate(
+      cx + Math.cos(middle) * 54,
+      cy + Math.sin(middle) * 54
+    );
+
+    let rotation = middle;
+    const onLeftHalf = Math.cos(middle) < 0;
+    if (onLeftHalf) rotation += Math.PI;
+
+    ctx.rotate(rotation);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `700 ${fontSize}px "Segoe UI", Arial, sans-serif`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = onLeftHalf ? 'right' : 'left';
+    ctx.shadowColor = 'rgba(0,0,0,.25)';
+    ctx.shadowBlur = 1.5;
+    ctx.fillText(students[i], 0, 0, maxTextWidth);
+    ctx.restore();
+  }
+
+  // Center circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, 25, 0, 2 * Math.PI);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#1F3DA8';
+  ctx.stroke();
+}
+
+function spinWheel() {
+  if (isSpinning || students.length === 0) return;
+
+  isSpinning = true;
+  document.getElementById('winnerText').style.display = 'none';
+  document.getElementById('spinButton').disabled = true;
+
+  const initialAngle = startAngle;
+  const totalRotation = (Math.random() * 3 + 5) * 2 * Math.PI;
+  const duration = 4800 + Math.random() * 900;
+  const startTime = performance.now();
+
+  function animate(now) {
+    const progress = Math.min((now - startTime) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 4);
+
+    startAngle = initialAngle + totalRotation * eased;
+    drawWheel();
+
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      stopRotate();
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+function stopRotate() {
+  isSpinning = false;
+  document.getElementById('spinButton').disabled = false;
+
+  const fullTurn = 2 * Math.PI;
+  const pointerAngle = ((Math.PI * 1.5 - startAngle) % fullTurn + fullTurn) % fullTurn;
+  const arcSize = fullTurn / students.length;
+  const index = Math.floor(pointerAngle / arcSize) % students.length;
+  const winner = students[index];
+
+  document.getElementById('winnerName').textContent = winner;
+  document.getElementById('winnerText').style.display = 'block';
+}
+
+/* ================= ANIMATED CELL SCRIPT ================= */
+const ORG = {
+  membrane: { name: 'Màng sinh chất', color: '#E0A93B',
+    role: 'Ranh giới của tế bào, kiểm soát các chất đi vào – đi ra.',
+    facts: ['Cấu tạo từ lớp kép phospholipid xen các phân tử protein', 'Có tính thấm chọn lọc (bán thấm)', 'Tham gia nhận biết và truyền tín hiệu'] },
+  nucleus: { name: 'Nhân', color: '#1F3DA8',
+    role: 'Trung tâm điều khiển của tế bào, chứa vật chất di truyền (DNA).',
+    facts: ['Có màng nhân kép với các lỗ nhân cho RNA, protein đi qua', 'Nhân con tổng hợp rRNA và lắp ráp tiểu đơn vị ribosome', 'DNA kết hợp với protein thành chất nhiễm sắc'] },
+  rer: { name: 'Lưới nội chất hạt', color: '#7B4F9D',
+    role: 'Hệ thống ống và túi dẹt có ribosome bám bên ngoài.',
+    facts: ['Tổng hợp protein tiết ra ngoài và protein của màng', 'Ribosome bám tạo vẻ “có hạt”', 'Thường nối liền với màng ngoài của nhân'] },
+  ser: { name: 'Lưới nội chất trơn', color: '#B07CC6',
+    role: 'Hệ thống ống không có ribosome bám.',
+    facts: ['Tổng hợp lipid (phospholipid, steroid)', 'Chuyển hóa đường, khử độc cho tế bào', 'Dự trữ ion Ca²⁺ (đặc biệt ở tế bào cơ)'] },
+  golgi: { name: 'Bộ máy Golgi', color: '#D4A017',
+    role: 'Chồng túi dẹt xếp song song, giống “trạm bưu điện” của tế bào.',
+    facts: ['Hoàn thiện, lắp ráp và đóng gói protein, lipid', 'Phân phối sản phẩm đi nơi khác trong các túi vận chuyển', 'Sản phẩm có thể được đưa ra ngoài tế bào (xuất bào)'] },
+  mito: { name: 'Ty thể', color: '#C0603A',
+    role: 'Bào quan có màng kép, được ví như “nhà máy năng lượng” của tế bào.',
+    facts: ['Màng trong gấp nếp thành các mào, bên trong là chất nền', 'Thực hiện hô hấp tế bào, tổng hợp ATP', 'Có DNA vòng và ribosome riêng'] },
+  lyso: { name: 'Lysosome', color: '#7D3C98',
+    role: 'Túi nhỏ chứa enzyme thủy phân (có ở tế bào động vật).',
+    facts: ['Phân hủy bào quan già, chất thải và vi khuẩn xâm nhập', 'Được bao bọc bởi màng đơn', 'Hình thành từ bộ máy Golgi'] },
+  ribo: { name: 'Ribosome', color: '#4A235A',
+    role: 'Bào quan không có màng, cấu tạo từ rRNA và protein.',
+    facts: ['Là nơi tổng hợp protein', 'Tự do trong tế bào chất hoặc bám trên lưới nội chất hạt', 'Gồm 2 tiểu đơn vị: lớn và bé'] },
+  cyto: { name: 'Khung xương tế bào', color: '#546E7A',
+    role: 'Mạng lưới các sợi protein trong tế bào chất.',
+    facts: ['Gồm vi ống, vi sợi và sợi trung gian', 'Duy trì hình dạng tế bào, neo giữ các bào quan', 'Là “đường ray” để vận chuyển túi và giúp tế bào di chuyển'] },
+  centro: { name: 'Trung thể', color: '#455A64',
+    role: 'Gồm 2 trung tử đặt vuông góc, tổ chức các vi ống.',
+    facts: ['Có ở tế bào động vật, thường không có ở tế bào thực vật', 'Hình thành thoi phân bào khi tế bào phân chia', 'Không có màng bao bọc'] }
+};
+
+let cellSel = null, tourTimer = null, tourIndex = 0, cellAnimPaused = false;
+
+function cellDefaultInfo() {
+  return '<h3>Tế bào nhân thực</h3>' +
+    '<p>Có nhân hoàn chỉnh, hệ thống nội màng, khung xương tế bào và nhiều bào quan.</p>' +
+    '<p class="hint">👆 Nhấn vào một bào quan trên hình, chọn nút bên dưới, hoặc bấm “Tự động giới thiệu”.</p>';
+}
+
+function selectOrg(key, fromTour) {
+  if (!fromTour) stopTour();
+  if (!fromTour && key === cellSel) key = null;   // nhấn lần nữa để bỏ chọn
+  cellSel = key;
+  const svg = document.getElementById('cellSvg');
+  svg.classList.toggle('has-sel', !!key);
+  svg.querySelectorAll('.org').forEach(g => g.classList.toggle('sel', g.dataset.key === key));
+  document.querySelectorAll('.cell-chip').forEach(c => c.classList.toggle('active', c.dataset.key === key));
+
+  const panel = document.getElementById('cellInfo');
+  const d = key ? ORG[key] : null;
+  panel.style.borderTopColor = d ? d.color : 'var(--navy)';
+  panel.innerHTML = d
+    ? '<h3 style="color:' + d.color + '">' + d.name + '</h3><p><strong>' + d.role + '</strong></p>' +
+      '<ul class="clean">' + d.facts.map(f => '<li>' + f + '</li>').join('') + '</ul>'
+    : cellDefaultInfo();
+  panel.classList.remove('pop'); void panel.offsetWidth; panel.classList.add('pop');
+}
+
+function stopTour() {
+  if (tourTimer) { clearInterval(tourTimer); tourTimer = null; }
+  const b = document.getElementById('tourBtn');
+  if (b) b.textContent = '▶ Tự động giới thiệu';
+}
+
+function toggleTour() {
+  if (tourTimer) { stopTour(); return; }
+  const keys = Object.keys(ORG);
+  tourIndex = 0;
+  const step = () => { selectOrg(keys[tourIndex % keys.length], true); tourIndex++; };
+  step();
+  tourTimer = setInterval(step, 4200);
+  document.getElementById('tourBtn').textContent = '⏹ Dừng giới thiệu';
+  if (cellAnimPaused) toggleCellAnim();
+}
+
+function toggleCellAnim() {
+  cellAnimPaused = !cellAnimPaused;
+  const svg = document.getElementById('cellSvg');
+  if (cellAnimPaused) svg.pauseAnimations(); else svg.unpauseAnimations();
+  document.getElementById('animBtn').textContent = cellAnimPaused ? '▶ Chạy hiệu ứng' : '⏸ Tạm dừng hiệu ứng';
+}
+
+function syncCellAnimation(onCellSlide) {
+  const svg = document.getElementById('cellSvg');
+  if (!svg || !svg.pauseAnimations) return;
+  if (onCellSlide && !cellAnimPaused) svg.unpauseAnimations(); else svg.pauseAnimations();
+  if (!onCellSlide) stopTour();
+}
+
+function initCell() {
+  const chips = document.getElementById('cellChips');
+  chips.innerHTML = Object.keys(ORG).map(k =>
+    '<button type="button" class="cell-chip" data-key="' + k + '"><i style="background:' + ORG[k].color + '"></i>' + ORG[k].name + '</button>'
+  ).join('');
+  chips.querySelectorAll('.cell-chip').forEach(c => c.addEventListener('click', () => selectOrg(c.dataset.key)));
+  document.querySelectorAll('#cellSvg .org').forEach(g => g.addEventListener('click', () => selectOrg(g.dataset.key)));
+  selectOrg(null, true);
+}
+
+window.onload = function() {
+  initCell();
+  updateWheelFromInput();
+  drawWheel();
+  showSlide(1);
+};
+</script>
+
+</body>
+</html>
